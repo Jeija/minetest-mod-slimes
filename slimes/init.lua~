@@ -27,7 +27,7 @@ minetest.register_entity("slimes:small",{
 
 	on_activate = function(self)
 		self.yaw = math.random() * 360
-		self.direction = {x = math.cos(self.yaw), y = 6, z = math.sin(self.yaw)}
+		self.direction = {x = math.sin(180-self.yaw), y = 6, z = math.cos(self.yaw)}
 		self.object:setacceleration({x = 0, y = -9.8, z = 0})
 	end,
 
@@ -57,7 +57,7 @@ minetest.register_entity("slimes:small",{
 				self.object:remove()
 			end
 			self.yaw = math.random() * 360
-			self.direction = {x = math.cos(self.yaw), y = 6, z = math.sin(self.yaw)}
+			self.direction = {x = math.sin(180-self.yaw), y = 6, z = math.cos(self.yaw)}
 			self.status = 2
 			self.object:setvelocity({x = 0, y = 0, z = 0})
 			self.timer = 0
