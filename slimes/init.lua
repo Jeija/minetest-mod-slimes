@@ -1,6 +1,5 @@
 SLIME_SIZE = 0.5
 SLIME_BOX = math.sqrt(2*math.pow(SLIME_SIZE, 2))/2
-PI = math.pi
 
 minetest.register_entity("slimes:small",{
 	initial_properties = {
@@ -10,24 +9,24 @@ minetest.register_entity("slimes:small",{
 		textures = {
 			"slime_top.png",
 			"slime_bottom.png",
+			"slime_front.png",
 			"slime_sides.png",
 			"slime_sides.png",
 			"slime_sides.png",
-			"slime_front.png"
 		},
-		collisionbox = {-SLIME_BOX, -0.25, -SLIME_BOX, SLIME_BOX, 0.25, SLIME_BOX},
+		collisionbox = {-SLIME_BOX, -SLIME_SIZE/2, -SLIME_BOX, SLIME_BOX, SLIME_SIZE/2, SLIME_BOX},
 		physical = true,
 	},
 
-	timer = 0,
-	timer2 = 0,
+	timer = 6,
+	timer2 = 1,
+	timer3 = 0,
 	yaw = 0,
 	direction = {},
 	status = 2, --1 = jump, 2 = rotate
+	attracts_slime = true,
 
 	on_activate = function(self)
-		self.yaw = math.random() * 360
-		self.direction = {x = math.cos(self.yaw), y = 6, z = math.sin(self.yaw)}
 		self.object:setacceleration({x = 0, y = -9.8, z = 0})
 	end,
 
@@ -36,45 +35,52 @@ minetest.register_entity("slimes:small",{
 	end,
 
 	on_step = function(self, dtime)
-		if self.status == 2 then
-			local oldyaw = self.object:getyaw()
-			if oldyaw >= PI then oldyaw = 0 end
-			oldyaw = oldyaw + dtime
-			self.object:setyaw(oldyaw)
-			if approx(oldyaw*360/PI, self.yaw, 3) then
-				self.object:setyaw(self.yaw)
-				self.status = 1
-			end
-			return
-		end
-
-		self.timer = self.timer + dtime
 		self.timer2 = self.timer2 + dtime
+		if self.status == 2 and self.timer2 > 0.5 then
+			self.timer2 = 1.2
+			self.status = 1
 
-		if self.timer > 6 then
 			local pos = self.object:getpos()
 			if slime_lonely(pos) and not minetest.env:find_node_near(pos, 32, "default:mese") then
 				self.object:remove()
 			end
-			self.yaw = math.random() * 360
-			self.direction = {x = math.cos(self.yaw), y = 6, z = math.sin(self.yaw)}
-			self.status = 2
-			self.object:setvelocity({x = 0, y = 0, z = 0})
-			self.timer = 0
-			self.timer2 = 1.2
+			self.yaw = slime_getyaw(pos)
+			if self.yaw == nil then
+				local yaw = math.random() * math.pi
+			else
+				self.timer = self.timer + 4
+			end
+			self.object:setyaw(self.yaw)
+			--self.object:set_properties({automatic_rotate = 0})
+			self.direction = {x = math.cos(self.yaw)*2, y = 6, z = math.sin(self.yaw)*2}
 		end
 
-		if self.timer2 > 1.2 then
-			local pos = self.object:getpos()
-			--local nu = minetest.env:get_node({x = pos.x, y = pos.y - self.initial_properties.visual_size.y/1.99, z = pos.z})
-			--if nu.name ~= "air" then
-				self.object:setvelocity(self.direction)
-				self.timer2 = 0
-			--end
+
+		self.timer = self.timer + dtime
+		self.timer3 = self.timer3 + dtime
+
+		if self.timer2 > 1.3 and self.object:getvelocity().y == 0 then
+			self.object:setvelocity(self.direction)
+			self.timer2 = 0
+		end
+
+		if self.timer >= 6 and self.object:getvelocity().y == 0 then
+			self.timer = 0
+			self.timer2 = 0
+
+			self.status = 2
+			--self.object:set_properties({automatic_rotate = math.pi * 8})
+		end
+
+		if self.timer3 > 0.07 then
+			vel = self.object:getvelocity()
+			if vel.y == 0 and (vel.x ~= 0 or vel.z ~= 0) then
+				self.object:setvelocity({x = 0, y = 0, z = 0})
+			end
+			self.timer3 = 0
 		end
 	end,
 })
-
 
 function slime_lonely (pos)
 	objs = minetest.env:get_objects_inside_radius(pos, 32)
@@ -92,12 +98,27 @@ function approx(val1, val2, deviation)
 	return false
 end
 
+function slime_getyaw (pos) -- get yaw, only if objects to follow nearby
+	objs = minetest.env:get_objects_inside_radius(pos, 5)
+	for i, obj in ipairs(objs) do
+		if obj:is_player() or obj:get_luaentity().name == "slimes:small" then
+			local ppos = {x = obj:getpos().x - pos.x,
+				      z = obj:getpos().z - pos.z}
+			if ppos.x ~= 0 and ppos.z ~= 0 then --found itself as an object
+				local yaw = math.abs(math.atan(ppos.x/ppos.z) - math.pi / 2)
+				if ppos.z < 0 then yaw = yaw + math.pi end
+				return yaw
+			end
+		end
+	end
+	return nil
+end
+
 minetest.register_abm({
-	nodenames = {"default:dirt_with_grass"},
+	nodenames = {"default:leaves"},
 	interval = 10.0,
 	chance = 10000,
 	action = function(pos, node)
-		minetest.env:add_entity({x=pos.x, y=pos.y+0.75, z=pos.z}, "slimes:small")
+		minetest.env:add_entity({x=pos.x, y=pos.y + 1, z=pos.z}, "slimes:small")
 	end,
 })
-
