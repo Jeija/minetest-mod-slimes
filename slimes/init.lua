@@ -1,4 +1,4 @@
-SLIME_SIZE = 0.4
+SLIME_SIZE = 0.5
 SLIME_BOX = math.sqrt(2*math.pow(SLIME_SIZE, 2))/2
 GRAVITY = 9.8
 
@@ -33,7 +33,10 @@ minetest.register_entity("slimes:small",{
 	end,
 
 	on_punch = function(self)
-		self.object:remove()
+		if self.object:get_hp() <= 0 then
+			minetest.env:add_item(self.object:getpos(), "mesecons_materials:glue 4")
+			self.object:remove()
+		end
 	end,
 
 	on_step = function(self, dtime)
@@ -124,7 +127,7 @@ end
 minetest.register_abm({
 	nodenames = {"default:leaves"},
 	interval = 10.0,
-	chance = 10000,
+	chance = 100000,
 	action = function(pos, node)
 		minetest.env:add_entity({x=pos.x, y=pos.y + 1, z=pos.z}, "slimes:small")
 	end,
